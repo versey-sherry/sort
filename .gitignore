@@ -1,2 +1,12 @@
 output/
 mot_benchmark
+.ipynb_checkpoints/
+test.ipynb
+*.DS_Store
+MOT17
+MOT20
+__pychache__
+__pycache__/
+results/
+*.avi
+results/
