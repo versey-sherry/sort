@@ -23,15 +23,22 @@ from collections import defaultdict, OrderedDict
 
 '''
 python demo.py --video_name MOT17/train/MOT17-02-FRCNN/img1 --gt MOT17/train/MOT17-02-FRCNN/gt/gt.txt --writeout True
-Overall Mean IoU is 76.08%
+Overall Mean IoU is 76.62%
 python demo.py --video_name MOT17/train/MOT17-04-FRCNN/img1 --gt MOT17/train/MOT17-04-FRCNN/gt/gt.txt --writeout True
+Overall Mean IoU is 79.24%
 python demo.py --video_name MOT17/train/MOT17-09-FRCNN/img1 --gt MOT17/train/MOT17-09-FRCNN/gt/gt.txt --writeout True
-python demo.py --video_name MOT17/train/MOT17-11-FRCNN/img1 --gt MOT17/train/MOT17-2-2FRCNN/gt/gt.txt --writeout True
+Overall Mean IoU is 79.41%
+python demo.py --video_name MOT17/train/MOT17-11-FRCNN/img1 --gt MOT17/train/MOT17-11-FRCNN/gt/gt.txt --writeout True
+Overall Mean IoU is 83.86%
 
-python demo.py --video_name MOT17/train/MOT20-01/img1 --gt MOT17/train/MOT20-01/gt/gt.txt --writeout True
-python demo.py --video_name MOT17/train/MOT20-02/img1 --gt MOT17/train/MOT20-02/gt/gt.txt --writeout True
-python demo.py --video_name MOT17/train/MOT20-03/img1 --gt MOT17/train/MOT20-03/gt/gt.txt --writeout True
-python demo.py --video_name MOT17/train/MOT20-05/img1 --gt MOT17/train/MOT20-05/gt/gt.txt --writeout True
+python demo.py --video_name MOT20/train/MOT20-01/img1 --gt MOT20/train/MOT20-01/gt/gt.txt --writeout True
+
+python demo.py --video_name MOT20/train/MOT20-02/img1 --gt MOT20/train/MOT20-02/gt/gt.txt --writeout True
+
+python demo.py --video_name MOT20/train/MOT20-03/img1 --gt MOT20/train/MOT20-03/gt/gt.txt --writeout True
+
+python demo.py --video_name MOT20/train/MOT20-05/img1 --gt MOT20/train/MOT20-05/gt/gt.txt --writeout True
+
 '''
 
 #Set up the argument parser
@@ -75,7 +82,7 @@ def get_frames(video_name):
         images = glob(os.path.join(video_name, '*.jp*'))
         #print(images)
         images = sorted(images,
-                        key=lambda x: int(x.split('/')[-1].split('.')[0]))[0:30]
+                        key=lambda x: int(x.split('/')[-1].split('.')[0]))
         for img in images:
             frame = cv2.imread(img)
             yield frame
@@ -173,7 +180,7 @@ def get_detection(model, path, device, threshold=0.5, rect_th=2, text_size=1.5, 
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Current device is', device)
-    
+    track_data = []
     images = glob(os.path.join(args.video_name, '*.jp*'))
     images = sorted([item.split('/')[-1] for item in images])
     threshold =0.5
@@ -203,7 +210,7 @@ def main():
     for frame in get_frames(args.video_name):
         print(images[i])
         start = time.time()
-        #change different selection threhold here
+        #change different selection threhold here for the rcnn result
         odata[images[i]]=get_prediction(model, frame, device, 0.8)
         i+=1
         print('process time is', time.time()- start)
@@ -217,6 +224,7 @@ def main():
     iou_array = []
     #keep track of id
     gt_track_id = {}
+    gt_blist = []
     
     for key in odata.keys(): 
         a+=1
@@ -243,6 +251,7 @@ def main():
         track_bbs_ids = mot_tracker.update(np.array(arrlist))
         #print(track_bbs_ids.shape)
         print('frame', a, 'Association update time is {} second'.format(round(time.time() - start, 4)))
+        #print(track_bbs_ids)
         
         newname = save_path + key
         #print(newname)
@@ -250,7 +259,7 @@ def main():
         if args.gt:
             #relate the gt_id with track id
             gt_track = defaultdict(list)
-            print(gt_track)
+            #print(gt_track)
             for gt_box in gt_result:
                 gt_label = gt_box[0]
                 gt_box = [gt_box[1], gt_box[2], gt_box[1]+gt_box[3], gt_box[2]+gt_box[4]]
@@ -264,7 +273,7 @@ def main():
                                 gt_track[gt_label] = [int(ele[4]), temp_iou, bbox_track]
                         else:
                             gt_track[gt_label] = [int(ele[4]), temp_iou, bbox_track]           
-            print(gt_track)
+            #print(gt_track)
             
         #ploting ground truth
         if args.gt:
@@ -275,54 +284,82 @@ def main():
                 gt_label = gt_box[0]
                 gt_box = [gt_box[1], gt_box[2], gt_box[1]+gt_box[3], gt_box[2]+gt_box[4]]
                 if gt_label not in gt_track.keys():
-                    #plot 0 iou with white shade
-                    cv2.rectangle(overlay, (gt_box[0], gt_box[1]), (gt_box[2], gt_box[3]), (255,255,255), -1)
+                    #plot 0 iou with red shade
+                    cv2.rectangle(overlay, (gt_box[0], gt_box[1]), (gt_box[2], gt_box[3]), (0,0,255), -1)
                 else:
                     if gt_track[gt_label][1] > threshold:
-                        #plot over threshold with green shade
-                        cv2.rectangle(overlay, (gt_box[0], gt_box[1]), (gt_box[2], gt_box[3]), (0,255,0), -1)
-                        img_iou.append(gt_track[gt_label][1])
-                        if gt_label not in gt_track_id.keys():
+                        if gt_label in gt_track_id.keys():
+                            if int(gt_track_id[gt_label]) != int(gt_track[gt_label][0]):
+                                print('match id',gt_track_id[gt_label], int(gt_track[gt_label][0]))
+                                gt_blist.append(gt_label)
+                                del gt_track_id[gt_label]
+                        elif gt_label not in gt_track_id.keys() and gt_label not in gt_blist:
                             gt_track_id[gt_label] = gt_track[gt_label][0]
                         else:
-                            if gt_track_id[gt_label] != gt_track[gt_label][0]:
-                                del gt_track_id[gt_label]
+                            pass
+                        
+                        if gt_label not in gt_blist:
+                            #plot over threshold with green shade
+                            cv2.rectangle(overlay, (gt_box[0], gt_box[1]), (gt_box[2], gt_box[3]), (0,255,0), -1)
+                            img_iou.append(gt_track[gt_label][1])
+                        else:
+                            cv2.rectangle(overlay, (gt_box[0], gt_box[1]), (gt_box[2], gt_box[3]), (0,0,255), -1)
+                        #print('gt_label is', gt_label)
+                        #print('gt_id key', gt_track_id.keys())
                     else:
                         #plot over threshold with red shade
                         cv2.rectangle(overlay, (gt_box[0], gt_box[1]), (gt_box[2], gt_box[3]), (0,0,255), -1)    
             alpha = 0.3
             det_img =cv2.addWeighted(overlay, alpha, det_img, 1 - alpha, 0)
+            #print(gt_track_id)
+            print(gt_blist)
 
+        
         for j in range(track_bbs_ids.shape[0]):  
             ele = track_bbs_ids[j, :]
+            print(ele)
             bbox_track = [int(ele[0]), int(ele[1]), int(ele[2]), int(ele[3])]
             track_label = str(int(ele[4]))
-            cv2.rectangle(det_img, (bbox_track[0], bbox_track[1]), (bbox_track[2], bbox_track[3]), get_color(int(ele[4])), 3)
-            cv2.putText(det_img, track_label, (bbox_track[0]+5, bbox_track[1]+20), 0,0.6, (255,255,255),thickness=2)
-        
+            track_data.append([a, int(ele[4]), int(ele[0]), int(ele[1]), int(ele[2])-int(ele[0]), int(ele[3]) - int(ele[1])])
+            #print([a, int(ele[4]), int(ele[0]), int(ele[1]), int(ele[2])-int(ele[0]), int(ele[3]) - int(ele[1])])
+            #cv2.rectangle(det_img, (bbox_track[0], bbox_track[1]), (bbox_track[2], bbox_track[3]), get_color(int(ele[4])), 3)
+            #cv2.putText(det_img, track_label, (bbox_track[0]+5, bbox_track[1]+20), 0,0.6, (255,255,255),thickness=2)
+            cv2.rectangle(det_img, (bbox_track[0], bbox_track[1]), (bbox_track[2], bbox_track[3]), (0,255,0), 3)
+            cv2.putText(det_img, 'person', (bbox_track[0]+5, bbox_track[1]+20), 0,0.6, (0,255,0),thickness=2)
+        img_array.append(det_img)
+        print('append')
+         
+    file_name = '_'.join([args.video_name.split('/')[-2],'.txt'])
+    with open(file_name, 'w') as file:
+        for det in track_data:
+            print(det)
+            det = '{}, {}, {}, {}, {}, {}, 1, -1, -1, -1'.format(det[0], det[1], det[2], det[3], det[4], det[5])
+            file.write('%s\n' % str(det))
+   
         #only compute tracked threshold
-        
         if len(img_iou)>0:
             img_iou_mean = sum(img_iou)/len(img_iou)
             iou_array.append(img_iou_mean)
-            text = 'Frame {}: Mean IoU is {}%, {} detected'.format(a, round((img_iou_mean *100),2), len(gt_track_id))
+            text = 'Frame {}: Mean IoU is {}%, {} tracked'.format(a, round((img_iou_mean *100),2), len(gt_track_id))
         else:
-            text = 'Frame {}: Mean IoU is {}%, {} detected)'.format(a, 0, len(gt_track_id))
+            text = 'Frame {}: Mean IoU is {}%, {} tracked)'.format(a, 0, len(gt_track_id))
         print(text)
-        cv2.putText(det_img, text, (30,30), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0,255,0), 2, cv2.LINE_AA) 
+        #cv2.putText(det_img, text, (30,30), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0,255,0), 2, cv2.LINE_AA) 
+
+        #img_array.append(det_img)
+        #print('appending img')
         
-        img_array.append(det_img)
-        if args.writeout:
-            height, width, _ = img_array[0].shape
-            size = (width, height)
-            file_name = '_'.join([args.video_name.split('/')[-2],'output.avi'])
-            out = cv2.VideoWriter(file_name,cv2.VideoWriter_fourcc(*'DIVX'), 2, size)
-            for i in range(len(img_array)):
-                out.write(img_array[i])
-            out.release()
-        else:
-            cv2.imwrite(newname,det_img, [cv2.IMWRITE_JPEG_QUALITY, 70])
-        
+    if args.writeout:
+        height, width, _ = img_array[0].shape
+        size = (width, height)
+        file_name = '_'.join([args.video_name.split('/')[-2],'output.avi'])
+        out = cv2.VideoWriter(file_name,cv2.VideoWriter_fourcc(*'DIVX'), 20, size)
+        for i in range(len(img_array)):
+            out.write(img_array[i])
+        out.release()
+    else:
+        cv2.imwrite(newname,det_img, [cv2.IMWRITE_JPEG_QUALITY, 70])
+
     #print the overall iou
     if len(iou_array)>0:
         print('Overall Mean IoU is {}%'.format(round((sum(iou_array)/len(iou_array)) *100,2)))
