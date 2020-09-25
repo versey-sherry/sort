@@ -43,7 +43,23 @@ To install required dependencies run:
 ```
 $ pip install -r requirements.txt
 ```
+### Alternative Installation
+* Clone this repo
 
+creating an conda environment from an ``environment.yml`` file
+```
+conda env create -f environment.yml
+```
+The first line of the ``yml`` file sets the new environment's name. For more details see [Conda Documentation](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)
+
+Activate the new environment
+```
+conda activate SORT
+```
+Verify the new environment
+```
+conda env list
+```
 
 ### Demo:
 
