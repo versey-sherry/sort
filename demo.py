@@ -31,6 +31,11 @@ Overall Mean IoU is 79.41%
 python demo.py --video_name MOT17/train/MOT17-11-FRCNN/img1 --gt MOT17/train/MOT17-11-FRCNN/gt/gt.txt --writeout True
 Overall Mean IoU is 83.86%
 
+python demo.py --video_name MOT17/train/MOT17-05-FRCNN/img1 --gt MOT17/train/MOT17-05-FRCNN/gt/gt.txt
+python demo.py --video_name MOT17/train/MOT17-10-FRCNN/img1 --gt MOT17/train/MOT17-10-FRCNN/gt/gt.txt
+python demo.py --video_name MOT17/train/MOT17-13-FRCNN/img1 --gt MOT17/train/MOT17-13-FRCNN/gt/gt.txt
+
+
 python demo.py --video_name MOT20/train/MOT20-01/img1 --gt MOT20/train/MOT20-01/gt/gt.txt --writeout True
 
 python demo.py --video_name MOT20/train/MOT20-02/img1 --gt MOT20/train/MOT20-02/gt/gt.txt --writeout True
@@ -344,11 +349,11 @@ def main():
         else:
             text = 'Frame {}: Mean IoU is {}%, {} tracked)'.format(a, 0, len(gt_track_id))
         print(text)
-        #cv2.putText(det_img, text, (30,30), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0,255,0), 2, cv2.LINE_AA) 
+        cv2.putText(det_img, text, (30,30), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0,255,0), 2, cv2.LINE_AA) 
 
-        #img_array.append(det_img)
-        #print('appending img')
-        
+        img_array.append(det_img)
+        print('appending img')
+    '''
     if args.writeout:
         height, width, _ = img_array[0].shape
         size = (width, height)
@@ -365,7 +370,7 @@ def main():
         print('Overall Mean IoU is {}%'.format(round((sum(iou_array)/len(iou_array)) *100,2)))
     else:
         print('No tracked object')
-
+    '''
 if __name__ == '__main__':
     main()
 
